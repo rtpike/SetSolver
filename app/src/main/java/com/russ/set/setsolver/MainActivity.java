@@ -38,14 +38,13 @@ public class MainActivity extends AppCompatActivity implements CvCameraViewListe
     private MenuItem mItemDebugMode;
 
     private boolean camRunning = true;
-
     private int currentCard = 0;
 
     /**
      * Whether or not the system UI should be auto-hidden after
      * {@link #AUTO_HIDE_DELAY_MILLIS} milliseconds.
      */
-    private static final boolean AUTO_HIDE = true;
+    private static final boolean AUTO_HIDE = false;
 
     /**
      * If {@link #AUTO_HIDE} is set, the number of milliseconds to wait after
@@ -137,12 +136,25 @@ public class MainActivity extends AppCompatActivity implements CvCameraViewListe
     @Override
     public void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
 
         Log.d(TAG, "Creating and setting view");
+        setContentView(R.layout.activity_fullscreen);
+
+        mVisible = true;
+        mControlsView = findViewById(R.id.fullscreen_content_controls);
+        mContentView = findViewById(R.id.fullscreen_content);
+        mContentView.setOnTouchListener(this);
+
+        // Upon interacting with UI controls, delay any scheduled hide()
+        // operations to prevent the jarring behavior of controls going away
+        // while interacting with the UI.
+        findViewById(R.id.dummy_button).setOnTouchListener(mDelayHideTouchListener);
+
+        getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
+
         mOpenCvCameraView = new JavaCameraView(this, -1);
         setContentView(mOpenCvCameraView);
-        mOpenCvCameraView.setMaxFrameSize(800, 600);
+        mOpenCvCameraView.setMaxFrameSize(800, 600); //frame size
         mOpenCvCameraView.setVisibility(CameraBridgeViewBase.VISIBLE);
         mOpenCvCameraView.setCvCameraViewListener(this);
         mProcessImage = new processImage();
@@ -174,15 +186,17 @@ public class MainActivity extends AppCompatActivity implements CvCameraViewListe
         super.onDestroy();
         if (mOpenCvCameraView != null)
             mOpenCvCameraView.disableView();
+        if (mContentView != null)
+            mContentView.destroyDrawingCache();
     }
 
     @Override
     public boolean onCreateOptionsMenu(Menu menu) {
         //TODO: put into XML
         Log.i(TAG, "called onCreateOptionsMenu");
-        mItemDebugCard = menu.add("Debug Cards");
+        mItemDebugCard = menu.add("Inspect Cards");
         mItemDebugCard.setCheckable(true);
-        mItemDebugMode = menu.add("Debug Mode");
+        mItemDebugMode = menu.add("Show Debug Info");
         mItemDebugMode.setCheckable(true);
         return true;
     }
@@ -200,8 +214,18 @@ public class MainActivity extends AppCompatActivity implements CvCameraViewListe
         } else if (item == mItemDebugCard) {
             //Toggle check box
             mItemDebugCard.setChecked(!mItemDebugCard.isChecked());
+
+            if (mItemDebugCard.isChecked()) {
+                camRunning = false;
+                setContentView(R.layout.activity_fullscreen);
+                showCard();
+            } else {
+                camRunning = true;
+                setContentView(mOpenCvCameraView);
+
             /* We need to enable or disable drawing of the tile numbers */
-            //FIXME mProcessImage.toggleTileNumbers();
+                //FIXME mProcessImage.toggleTileNumbers();
+            }
         }
         return true;
     }
@@ -217,7 +241,7 @@ public class MainActivity extends AppCompatActivity implements CvCameraViewListe
         //FIXME toggle(); //UI
 
         if (mItemDebugCard.isChecked() && !camRunning) {
-            showCard(view);
+            showCard();
             return false;
         }
 
@@ -233,20 +257,21 @@ public class MainActivity extends AppCompatActivity implements CvCameraViewListe
         }
         return false;
 
-
     }
 
-
-    public void showCard(View v) {
+    public void showCard() {
         /* Get next card on touch */
         //imgView.setOnTouchListener(new OnTouchListener(){
 
         Card cardObj;
         List<Card> cards = mProcessImage.getCards();
         if (cards.size() <= 0) {return;} //no cards found
+        if (findViewById(android.R.id.content) != findViewById(R.layout.activity_fullscreen)) {
+            setContentView(R.layout.activity_fullscreen);
+        }
 
-        setContentView(R.layout.activity_fullscreen);
-        ImageView imgView = (ImageView) findViewById(R.id.imageView);
+
+        ImageView imgView = (ImageView) findViewById(R.id.fullscreen_content);
         cardObj = cards.get(currentCard % cards.size());
         Mat cardMat = cardObj.cardImg_markup;
         //Imgproc.cvtColor(cardObj.cardImg_markup, cardMat, Imgproc.COLOR_BGR2BGRA);
@@ -261,6 +286,11 @@ public class MainActivity extends AppCompatActivity implements CvCameraViewListe
         //imgView.setImageResource(0);
     }
 
+    public void switchContentView(View v) {
+        setContentView(R.layout.activity_fullscreen);
+        setContentView(mOpenCvCameraView);
+
+    }
 
     private static final int WHAT_PROCESS_IMAGE = 0;
     public Mat onCameraFrame(Mat inputFrame) {
