@@ -12,13 +12,16 @@ import org.opencv.imgproc.Imgproc;
 
 import android.annotation.SuppressLint;
 import android.graphics.Bitmap;
+
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Looper;
 import android.os.Message;
+import android.support.v4.view.GestureDetectorCompat;
 import android.support.v7.app.ActionBar;
 import android.support.v7.app.AppCompatActivity;
 import android.util.Log;
+import android.view.GestureDetector;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.view.MotionEvent;
@@ -26,16 +29,20 @@ import android.view.View;
 import android.view.WindowManager;
 import android.widget.ImageView;
 
+import com.google.android.gms.common.api.GoogleApiClient;
+
 import java.util.List;
 
-public class MainActivity extends AppCompatActivity implements CvCameraViewListener, View.OnTouchListener {
 
-    private static final String  TAG = ":MainActivity";
+public class MainActivity extends AppCompatActivity implements CvCameraViewListener, GestureDetector.OnGestureListener {
+    //View.OnTouchListener,
+    private static final String TAG = ":MainActivity";
 
     private CameraBridgeViewBase mOpenCvCameraView;
     private processImage mProcessImage;
     private MenuItem mItemDebugCard;
     private MenuItem mItemDebugMode;
+    private GestureDetectorCompat mDetector;
 
     private boolean camRunning = true;
     private int currentCard = 0;
@@ -111,24 +118,24 @@ public class MainActivity extends AppCompatActivity implements CvCameraViewListe
     };
 
 
-
     private BaseLoaderCallback mLoaderCallback = new BaseLoaderCallback(this) {
 
         @Override
         public void onManagerConnected(int status) {
             switch (status) {
-                case LoaderCallbackInterface.SUCCESS:
-                {
+                case LoaderCallbackInterface.SUCCESS: {
                     Log.i(TAG, "OpenCV loaded successfully");
 
                     /* Now enable camera view to start receiving frames */
-                    mOpenCvCameraView.setOnTouchListener(MainActivity.this);
+                    //mOpenCvCameraView.setOnTouchListener(MainActivity.this);
+                    mOpenCvCameraView.setCvCameraViewListener(MainActivity.this);
                     mOpenCvCameraView.enableView();
-                } break;
-                default:
-                {
+                }
+                break;
+                default: {
                     super.onManagerConnected(status);
-                } break;
+                }
+                break;
             }
         }
     };
@@ -141,37 +148,45 @@ public class MainActivity extends AppCompatActivity implements CvCameraViewListe
         setContentView(R.layout.activity_fullscreen);
 
         mVisible = true;
-        mControlsView = findViewById(R.id.fullscreen_content_controls);
-        mContentView = findViewById(R.id.fullscreen_content);
-        mContentView.setOnTouchListener(this);
+        //mControlsView = findViewById(R.id.fullscreen_content_controls);
+        //mControlsView.setOnTouchListener(MainActivity.this);
+        ////mContentView = findViewById(R.id.fullscreen_content);
+        ////mContentView.setOnTouchListener(MainActivity.this);
+
+        // Instantiate the gesture detector with the
+        // application context and an implementation of
+        // GestureDetector.OnGestureListener
+
+        mDetector = new GestureDetectorCompat(this, this);
+        //mDetector.setOnDoubleTapListener(this);
 
         // Upon interacting with UI controls, delay any scheduled hide()
         // operations to prevent the jarring behavior of controls going away
         // while interacting with the UI.
-        findViewById(R.id.dummy_button).setOnTouchListener(mDelayHideTouchListener);
+        ////findViewById(R.id.dummy_button).setOnTouchListener(mDelayHideTouchListener);
 
         getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
 
         mOpenCvCameraView = new JavaCameraView(this, -1);
+
         setContentView(mOpenCvCameraView);
         mOpenCvCameraView.setMaxFrameSize(800, 600); //frame size
         mOpenCvCameraView.setVisibility(CameraBridgeViewBase.VISIBLE);
         mOpenCvCameraView.setCvCameraViewListener(this);
         mProcessImage = new processImage();
         //FIXME mProcessImage.prepareNewGame();
+
     }
 
     @Override
-    public void onPause()
-    {
+    public void onPause() {
         super.onPause();
         if (mOpenCvCameraView != null)
             mOpenCvCameraView.disableView();
     }
 
     @Override
-    public void onResume()
-    {
+    public void onResume() {
         super.onResume();
         if (!OpenCVLoader.initDebug()) {
             Log.d(TAG, "Internal OpenCV library not found. Using OpenCV Manager for initialization");
@@ -206,7 +221,7 @@ public class MainActivity extends AppCompatActivity implements CvCameraViewListe
         Log.i(TAG, "Menu Item selected " + item);
         if (item == mItemDebugMode) {
             /* Toggle Debug mode */
-            if (mProcessImage != null){
+            if (mProcessImage != null) {
                 mProcessImage.debug = !mItemDebugMode.isChecked();
                 mItemDebugMode.setChecked(mProcessImage.debug);
             }
@@ -217,28 +232,27 @@ public class MainActivity extends AppCompatActivity implements CvCameraViewListe
 
             if (mItemDebugCard.isChecked()) {
                 camRunning = false;
+                currentCard = 0;
                 setContentView(R.layout.activity_fullscreen);
                 showCard();
             } else {
                 camRunning = true;
                 setContentView(mOpenCvCameraView);
-
-            /* We need to enable or disable drawing of the tile numbers */
-                //FIXME mProcessImage.toggleTileNumbers();
+                mOpenCvCameraView.enableView();
             }
         }
         return true;
     }
 
     public void onCameraViewStarted(int width, int height) {
+        camRunning = true;
     }
 
     public void onCameraViewStopped() {
+        camRunning = false;
     }
 
-    public boolean onTouch(View view, MotionEvent event) {
-
-        //FIXME toggle(); //UI
+    public boolean myTouchEvent(MotionEvent event) {
 
         if (mItemDebugCard.isChecked() && !camRunning) {
             showCard();
@@ -247,16 +261,22 @@ public class MainActivity extends AppCompatActivity implements CvCameraViewListe
 
         if (camRunning) { //pause
             onPause();
-            //mOpenCvCameraView.disableView();
-            camRunning =false;
-            //testImage2(); //debug
-        }else{
+            mOpenCvCameraView.disableView();
+            camRunning = false;
+        } else {
             onResume();
-            //mOpenCvCameraView.enableView();
-            camRunning =true;
+            mOpenCvCameraView.enableView();
+            camRunning = true;
         }
         return false;
 
+    }
+
+    @Override
+    public boolean onTouchEvent(MotionEvent event) {
+        this.mDetector.onTouchEvent(event);
+        // Be sure to call the superclass implementation
+        return super.onTouchEvent(event);
     }
 
     public void showCard() {
@@ -265,13 +285,17 @@ public class MainActivity extends AppCompatActivity implements CvCameraViewListe
 
         Card cardObj;
         List<Card> cards = mProcessImage.getCards();
-        if (cards.size() <= 0) {return;} //no cards found
-        if (findViewById(android.R.id.content) != findViewById(R.layout.activity_fullscreen)) {
+        if (cards.size() <= 0) {
+            return;
+        } //no cards found
+        if (findViewById(android.R.id.content).getId() != R.layout.activity_fullscreen) {
             setContentView(R.layout.activity_fullscreen);
         }
 
-
         ImageView imgView = (ImageView) findViewById(R.id.fullscreen_content);
+        if (currentCard < 0) {
+            currentCard = cards.size() + currentCard;
+        } //negative currentCard
         cardObj = cards.get(currentCard % cards.size());
         Mat cardMat = cardObj.cardImg_markup;
         //Imgproc.cvtColor(cardObj.cardImg_markup, cardMat, Imgproc.COLOR_BGR2BGRA);
@@ -279,7 +303,7 @@ public class MainActivity extends AppCompatActivity implements CvCameraViewListe
         Bitmap img = Bitmap.createBitmap(cardMat.cols(), cardMat.rows(), Bitmap.Config.ARGB_8888);
         Utils.matToBitmap(cardMat, img);
         imgView.setImageBitmap(img);
-        currentCard++;
+        currentCard = (currentCard + 1) % cards.size();
 
         //clear image (use either)
         //imgView.setImageResource(android.R.color.transparent);
@@ -293,6 +317,7 @@ public class MainActivity extends AppCompatActivity implements CvCameraViewListe
     }
 
     private static final int WHAT_PROCESS_IMAGE = 0;
+
     public Mat onCameraFrame(Mat inputFrame) {
 
 
@@ -314,7 +339,7 @@ public class MainActivity extends AppCompatActivity implements CvCameraViewListe
         });
 
         Imgproc.cvtColor(inputFrame, inputFrame, Imgproc.COLOR_RGBA2RGB);  //without this getRectSubPix will crash
-        Mat image =  mProcessImage.detectCards(inputFrame);
+        Mat image = mProcessImage.detectCards(inputFrame);
 /*        if (mProcessImage.numCards() >= 3) {
             onPause();
             camRunning =false;
@@ -375,5 +400,56 @@ public class MainActivity extends AppCompatActivity implements CvCameraViewListe
     }
 
 
+    @Override
+    public boolean onDown(MotionEvent e) {
+        return false;
+    }
+
+    @Override
+    public void onShowPress(MotionEvent e) {
+
+    }
+
+    @Override
+    public boolean onSingleTapUp(MotionEvent e) {
+        return myTouchEvent(e);
+    }
+
+    @Override
+    public boolean onScroll(MotionEvent e1, MotionEvent e2, float distanceX, float distanceY) {
+        return false;
+    }
+
+    @Override
+    public void onLongPress(MotionEvent e) {
+
+    }
+
+    @Override
+    public boolean onFling(MotionEvent e1, MotionEvent e2, float velocityX, float velocityY) {
+        //TODO: fix SWIPE_MIN_DISTANCE
+        final int SWIPE_MIN_DISTANCE = 50;
+        int nextOrPrev = 0;
+
+
+        if (mItemDebugCard.isChecked() && !camRunning) {
+
+            //swipe right
+            if (e1.getX() - e2.getX() > SWIPE_MIN_DISTANCE) {
+                nextOrPrev = 0;
+            } else if (e2.getX() - e1.getX() > SWIPE_MIN_DISTANCE) { //left
+                nextOrPrev = -2;
+            }
+            currentCard = currentCard + nextOrPrev;
+
+
+            showCard();
+            return false;
+        }
+        return false;
+    }
 }
+
+
+
 

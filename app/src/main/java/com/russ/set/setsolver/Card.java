@@ -214,9 +214,9 @@ public class Card implements Runnable {
          * lines: 240 - 220
          * empty: 255 - 250
          **/
-        if (mean.val[1] > 126) {
+        if (mean.val[1] > 115) {
             shade = shadeEnum.SOLID;
-        } else if (mean.val[1] <= 126 && mean.val[1] > 14) {//> 220 && mean.val[1] < 244){
+        } else if (mean.val[1] <= 115 && mean.val[1] > 14) {//> 220 && mean.val[1] < 244){
             shade = shadeEnum.LINES;
         } else if (mean.val[1] <= 14) {// 244 && mean.val[1] <= 255) {
             shade = shadeEnum.EMPTY;

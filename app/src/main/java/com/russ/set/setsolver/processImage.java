@@ -32,7 +32,7 @@ import java.lang.Math;
  */
 public class processImage { //} extends AsyncTask<Card, Void, Integer> {
 
-    static final boolean debug=true;
+    public boolean debug=false;
     private static final String TAG = "processImage";
     /*
     Detects cards by finding contours
@@ -102,7 +102,7 @@ public class processImage { //} extends AsyncTask<Card, Void, Integer> {
                 rect = Imgproc.minAreaRect(approxCurve);
                 Point[] curve_vertices = approxCurve.toArray();
                 if (curve_vertices.length == 4) {
-                    numCards++;
+
 
 /*                    Point[] vertices;
                     if (debug) {
@@ -132,6 +132,7 @@ public class processImage { //} extends AsyncTask<Card, Void, Integer> {
 
                     cardObj.thread = new Thread(cardObj);
                     cardObj.thread.start();
+                    numCards++;
 
                 }
                 //FIXME if (true) return cardObj.cardImg_markup; //debug
