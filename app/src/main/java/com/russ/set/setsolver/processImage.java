@@ -99,7 +99,7 @@ public class processImage { //} extends AsyncTask<Card, Void, Integer> {
             RotatedRect rect;
             if (area > 4000) {
                 //FIXME Rect rect = Imgproc.boundingRect(contours.get(i));
-                rect = Imgproc.minAreaRect(approxCurve);
+                rect = null; //Imgproc.minAreaRect(approxCurve); //FIXME - remove
                 Point[] curve_vertices = approxCurve.toArray();
                 if (curve_vertices.length == 4) {
 
@@ -233,6 +233,14 @@ public class processImage { //} extends AsyncTask<Card, Void, Integer> {
 
     }
 
+    double pointNorm(Point pts0, Point pts1) {
+        double x = pts0.x - pts1.x;
+        double y = pts0.y - pts1.y;
+
+        return Math.sqrt(Math.pow(x,2) + Math.pow(y,2));
+    }
+
+
     public void warpSubImage(RotatedRect rect,MatOfPoint2f warpBox, Mat in, Mat cropped) {
         /* Rotate and crop the given image */
 
@@ -244,23 +252,44 @@ public class processImage { //} extends AsyncTask<Card, Void, Integer> {
         //Imgproc.getRectSubPix(out, rect_size, rect.center, cropped);
 
         Point points[] = new Point[4];
-        points[0] =  new Point(0,0);
+
+        // 250x350
+
+/*        points[0] =  new Point(0,0);
         points[1] =  new Point(350,0);
         points[2] =  new Point(350,350);
         points[3] =  new Point(0,350);
+        MatOfPoint2f destWarp = new MatOfPoint2f(points);*/
+
+        //TODO: rotate warpBox so longest side is horizontal
+        Point[] curve_vertices = warpBox.toArray();
+        //if (curve_vertices.length == 4) {  //TODO: check length
+        double height_dist = pointNorm(curve_vertices[0], curve_vertices[1]);
+        double width_dist = pointNorm(curve_vertices[1], curve_vertices[2]);
+        if (height_dist < width_dist) {
+            //rotate points
+            points[3] =  new Point(0,0);
+            points[0] =  new Point(350,0);
+            points[1] =  new Point(350,350);
+            points[2] =  new Point(0,350);
+        } else {  //don't rotate
+            points[0] =  new Point(0,0);
+            points[1] =  new Point(350,0);
+            points[2] =  new Point(350,350);
+            points[3] =  new Point(0,350);
+        }
         MatOfPoint2f destWarp = new MatOfPoint2f(points);
 
         Mat transform = Imgproc.getPerspectiveTransform(warpBox,destWarp);
         //poker card size 822x1122
         Imgproc.warpPerspective(in, cropped, transform, new Size(350, 350), Imgproc.INTER_NEAREST);
-
     }
 
 
     private void adaptiveCanny(Mat in,Mat out) {
         double sigma = 0.33;
         Mat blur= new Mat();
-        //FIXME Imgproc.medianBlur(in, blur, 11); //TODO: I'm not sure which blur is faster
+        //Imgproc.medianBlur(in, blur, 15); //TODO: I'm not sure which blur is faster
         Imgproc.GaussianBlur(in, blur, new Size(11,11),0);
         Scalar mean = Core.mean(blur);
 
@@ -271,7 +300,7 @@ public class processImage { //} extends AsyncTask<Card, Void, Integer> {
         int lower = (int) Math.max(0, (1.0 - sigma) * mean.val[0]);
         int upper = (int) Math.max(0, (1.0 + sigma) * mean.val[0]);
 
-        Imgproc.Canny(blur, out, lower, upper, 5, true);
+        Imgproc.Canny(blur, out, lower, upper, 3, false);
     }
 
     public void loadTestImage(Context context, int resourceId) {
