@@ -1,6 +1,5 @@
-package com.russ.set.setsolver;
+package com.rtpike.setsolver;
 
-import android.os.AsyncTask;
 import android.util.Log;
 
 import org.opencv.core.Core;

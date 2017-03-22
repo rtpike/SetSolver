@@ -1,4 +1,4 @@
-package com.russ.set.setsolver;
+package com.rtpike.setsolver;
 
 import android.content.Context;
 import android.graphics.Bitmap;

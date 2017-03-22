@@ -1,4 +1,4 @@
-package com.russ.set.setsolver;
+package com.rtpike.setsolver;
 
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.LinkedBlockingQueue;

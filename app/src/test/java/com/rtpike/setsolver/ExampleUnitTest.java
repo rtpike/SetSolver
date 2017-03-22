@@ -1,13 +1,9 @@
-package com.russ.set.setsolver;
-
-import android.util.Log;
+package com.rtpike.setsolver;
 
 import org.junit.Before;
 import org.junit.Test;
-import org.opencv.android.Utils;
 import org.opencv.core.Mat;
 import org.opencv.core.Core;
-import org.opencv.imgcodecs.Imgcodecs;
 
 import static org.junit.Assert.*;
 

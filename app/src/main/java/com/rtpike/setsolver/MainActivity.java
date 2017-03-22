@@ -1,4 +1,4 @@
-package com.russ.set.setsolver;
+package com.rtpike.setsolver;
 
 import org.opencv.android.BaseLoaderCallback;
 import org.opencv.android.LoaderCallbackInterface;
@@ -28,8 +28,6 @@ import android.view.MotionEvent;
 import android.view.View;
 import android.view.WindowManager;
 import android.widget.ImageView;
-
-import com.google.android.gms.common.api.GoogleApiClient;
 
 import java.util.List;
 
