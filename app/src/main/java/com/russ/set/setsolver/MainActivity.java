@@ -313,7 +313,6 @@ public class MainActivity extends AppCompatActivity implements CvCameraViewListe
     public void switchContentView(View v) {
         setContentView(R.layout.activity_fullscreen);
         setContentView(mOpenCvCameraView);
-
     }
 
     private static final int WHAT_PROCESS_IMAGE = 0;
