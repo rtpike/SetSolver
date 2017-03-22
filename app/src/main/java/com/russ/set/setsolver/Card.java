@@ -30,6 +30,8 @@ import static org.opencv.core.Core.*;
  */
 
 
+
+
 public class Card implements Runnable {
     private static final String TAG = "Card";
     static final boolean debug = true;
@@ -118,7 +120,7 @@ public class Card implements Runnable {
             cardImg_markup.width();
             cardImg_markup.height();
             Point center = new Point(cardImg_markup.width() / 10, cardImg_markup.height() / 8);
-            Imgproc.putText(cardImg_markup, decodeCard(), center, Core.FONT_HERSHEY_PLAIN, 2, new Scalar(0, 0, 0));
+            Imgproc.putText(cardImg_markup, decodeCard(), center, Core.FONT_HERSHEY_PLAIN, 2, new Scalar(70, 70, 70));
             //cardImg_markup = cardThreshold;  //debug
             Log.d(TAG, "Card Info: " + decodeCard() + " ^^^^^^^^^^^^^^^^^^^^^^^");
 
@@ -142,11 +144,22 @@ public class Card implements Runnable {
 
         Imgproc.cvtColor(cardImg_markup, gray, Imgproc.COLOR_RGB2GRAY);
 
-        //Imgproc.Canny(gray, thresh, 15, 60, 3, false);
-        //Imgproc.adaptiveThreshold(gray, thresh, 255, Imgproc.ADAPTIVE_THRESH_MEAN_C, Imgproc.THRESH_BINARY_INV, 7, 5);
-        Imgproc.threshold(gray, thresh, 220, 255, Imgproc.THRESH_BINARY_INV);
-        Imgproc.findContours(thresh, contours, hierarchy, Imgproc.RETR_EXTERNAL, Imgproc.CHAIN_APPROX_SIMPLE);
+        //Imgproc.Canny(gray, thresh, 15, 60, 3, false); //debug
+        Imgproc.adaptiveThreshold(gray, thresh, 255, Imgproc.ADAPTIVE_THRESH_MEAN_C , Imgproc.THRESH_BINARY_INV, 15, 9); //debug
+        ///Imgproc.threshold(gray, thresh, 220, 255, Imgproc.THRESH_BINARY_INV);
+        //adaptiveCanny(gray,thresh);
 
+        //inRange(cardHSV, new Scalar(0, 25, 200), new Scalar(255, 255, 255), cardThreshold); //debug
+        ////blur = cardThreshold; //debug
+        //Imgproc.GaussianBlur(thresh, blur, new Size(5,5),0);
+        ///Imgproc.dilate(cardThreshold,cardThreshold,Imgproc.getStructuringElement(Imgproc.MORPH_ELLIPSE, new Size(5, 5)));
+        //Imgproc.morphologyEx(cardThreshold,cardThreshold,Imgproc.MORPH_CLOSE, Imgproc.getStructuringElement(Imgproc.MORPH_RECT, new Size(17, 17)));
+        Imgproc.findContours(thresh.clone(), contours, hierarchy, Imgproc.RETR_EXTERNAL, Imgproc.CHAIN_APPROX_SIMPLE);
+        ///Core.bitwise_and(cardImg_markup,cardImg_markup,blur,cardThreshold); //mask cardThreshold
+
+
+
+        cardImg_markup = thresh; //Debug
         double area = 0, validConArea = 0;
         MatOfPoint contours_0 = null;
 
@@ -155,11 +168,11 @@ public class Card implements Runnable {
         int contour_size = contours.size();
         for (conNum = 0; conNum < contour_size; conNum++) {
             area = Imgproc.contourArea(contours.get(conNum));
-            if (area > 600) {//debug
+            if (area > 2000) {//debug
                 validConNum++;
                 validConArea = area;
                 contours_0 = contours.get(conNum);
-                Imgproc.drawContours(cardImg_markup, contours, conNum, new Scalar(0, 255, 255), 2);
+                Imgproc.drawContours(cardImg_markup, contours, conNum, new Scalar(0, 255, 255), 1);
             }
         }
 
@@ -186,7 +199,7 @@ public class Card implements Runnable {
 
         double perimeter = Imgproc.arcLength(new MatOfPoint2f(contours_0.toArray()), true);
         double areaVsPer = validConArea / perimeter;
-        Mat centerMat = cardThreshold.submat(sampleRec);
+        Mat centerMat = cardHSV.submat(sampleRec);
         Scalar mean = mean(centerMat);
 
         MatOfPoint2f card_2f = new MatOfPoint2f(contours_0.toArray());
@@ -281,23 +294,32 @@ public class Card implements Runnable {
         Imgproc.cvtColor(cardImg_markup, cardHSV, Imgproc.COLOR_RGB2HSV);
 
         int rCnt, gCnt, pCnt;
+        Mat redThresh, greenThresh;// = null; //,purpleThresh ;
         //Red
-        inRange(cardHSV, new Scalar(0, 60, 100), new Scalar(10, 255, 255), cardThreshold);
+        inRange(cardHSV, new Scalar(0, 15, 100), new Scalar(15, 255, 245), cardThreshold);
+        //inRange(cardHSV, new Scalar(0, 60, 100), new Scalar(15, 255, 255), cardThreshold);
         rCnt = countNonZero(cardThreshold);
+        redThresh =cardThreshold.clone();
 
         //Green
-        inRange(cardHSV, new Scalar(45, 60, 100), new Scalar(80, 255, 255), cardThreshold);
+        inRange(cardHSV, new Scalar(50, 30, 100), new Scalar(80, 255, 245), cardThreshold);
+        //inRange(cardHSV, new Scalar(45, 40, 100), new Scalar(80, 255, 255), cardThreshold);
         gCnt = countNonZero(cardThreshold);
+        greenThresh = cardThreshold.clone();
 
         //Purple
-        inRange(cardHSV, new Scalar(120, 50, 100), new Scalar(165, 255, 255), cardThreshold);
+        inRange(cardHSV, new Scalar(115, 30, 100), new Scalar(165, 255, 245), cardThreshold);
+        //inRange(cardHSV, new Scalar(120, 40, 100), new Scalar(165, 255, 255), cardThreshold);
         pCnt = countNonZero(cardThreshold);
+        //purpleThresh.clone();
 
-        cardThreshold = cardHSV; //TODO
+        //cardThreshold = cardHSV; //TODO
         if (rCnt > gCnt && rCnt > pCnt) {
             color = colorEnum.RED;
+            cardThreshold = redThresh;
         } else if (gCnt > rCnt && gCnt > pCnt) {
             color = colorEnum.GREEN;
+            cardThreshold = greenThresh;
         } else if (pCnt > rCnt && pCnt > gCnt) {
             color = colorEnum.PURPLE;
         }
@@ -419,6 +441,25 @@ public class Card implements Runnable {
 
             Core.merge(channels, out);
         }
+    }
+
+    private void adaptiveCanny(Mat in,Mat out) {
+        double sigma = 0.25;
+        Mat blur= new Mat();
+        //Imgproc.medianBlur(in, blur, 9); //TODO: I'm not sure which blur is faster
+        Imgproc.GaussianBlur(in, blur, new Size(5,5),0);
+        //blur = in; //debug
+        Scalar mean = Core.mean(blur);
+
+/*        # apply automatic Canny edge detection using the computed median
+        lower = int(max(0, (1.0 - sigma) * v))
+        upper = int(min(255, (1.0 + sigma) * v))*/
+
+        int lower = (int) Math.max(0, (1.0 - sigma) * mean.val[0]);
+        int upper = (int) Math.max(0, (1.0 + sigma) * mean.val[0]);
+
+        Imgproc.threshold(blur, out, lower, 255, Imgproc.THRESH_BINARY_INV); //debug
+        //Imgproc.Canny(blur, out, lower, upper, 3, false);
     }
 
     /* Used for threading */
