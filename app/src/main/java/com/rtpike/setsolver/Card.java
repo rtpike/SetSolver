@@ -29,11 +29,9 @@ import static org.opencv.core.Core.*;
  */
 
 
-
-
 public class Card implements Runnable {
-    private static final String TAG = "Card";
     static final boolean debug = true;
+    private static final String TAG = "Card";
     public String cardName = null;
     public Thread thread = null;
 
@@ -50,39 +48,25 @@ public class Card implements Runnable {
 
     public MatOfPoint2f warpBox;
     public Mat parrentImage;
-
-    enum colorEnum {
-        RED, GREEN, PURPLE, INVALID
-    }
-
-    enum shapeEnum {
-        OVAL, SQUIGGLE, DIAMOND, INVALID
-    }
-
-    enum shadeEnum {
-        EMPTY, LINES, SOLID, INVALID
-    }
-
-    Card() {
-    }
-
-    Card(Mat cardImg) {
-        int cropSize = 15;  //crop of 15 pixels per side
-        this.cardImg = cardImg.submat(cropSize, cardImg.rows() - cropSize, cropSize, cardImg.cols() - cropSize); //crop off the edges
-    }
-
-    /* preload warpBox and input image. Use with the runnable */
-    Card(MatOfPoint2f warpBox, Mat in) {
-        this.warpBox = warpBox;
-        this.parrentImage = warpBox;
-    }
-
-
     public int number = -1; //number of shapes
     public colorEnum color = colorEnum.INVALID;  //red=0,green=1,purple=2
     public shadeEnum shade = shadeEnum.INVALID;  //0=empty, 1=lines, 2=solid
     public shapeEnum shape = shapeEnum.INVALID;  //"oval", "squiggle", "diamond"
     public Point[] corners; //From full parent image
+
+    Card() {
+    }
+
+
+    Card(Mat cardImg) {
+        int cropSize = 15;  //crop of 15 pixels per side
+        this.cardImg = cardImg.submat(cropSize, cardImg.rows() - cropSize, cropSize, cardImg.cols() - cropSize); //crop off the edges
+    }
+    /* preload warpBox and input image. Use with the runnable */
+    Card(MatOfPoint2f warpBox, Mat in) {
+        this.warpBox = warpBox;
+        this.parrentImage = warpBox;
+    }
 
     /* Rotate and crop the given image */
     public void processCardWarp(MatOfPoint2f warpBox, Mat in) {
@@ -141,6 +125,7 @@ public class Card implements Runnable {
         split(blur,XYZ);
         gray = XYZ.get(1); //debug*/
 
+        //FIXME: shadows can cause problem with shape detection
         Imgproc.cvtColor(cardImg_markup, gray, Imgproc.COLOR_RGB2GRAY);
 
         //Imgproc.Canny(gray, thresh, 15, 60, 3, false); //debug
@@ -255,7 +240,6 @@ public class Card implements Runnable {
         }
 
     }
-
 
     private void detectColor() {
 
@@ -401,22 +385,6 @@ public class Card implements Runnable {
         return decodeCard();
     }
 
-
-/*    // run detection method in background thread
-    // takes in parameter in the .execute(Mat mGray) call on the class that is created
-    @Override
-    protected Void doInBackground(Object... params) { //Mat... params) {
-        Log.d(TAG, "background task started: ");
-
-        MatOfPoint2f warpBox = (MatOfPoint2f) params[0];
-        Mat in = (Mat) params[1];
-
-        //processCard();
-        processCardWarp(warpBox, in);
-        return null;
-
-    }*/
-
     /* Color transform */
     private void colorTransform(Mat in, double tran[], Mat out) {
 
@@ -443,22 +411,23 @@ public class Card implements Runnable {
     }
 
     private void adaptiveCanny(Mat in,Mat out) {
-        double sigma = 0.25;
+        double sigma = 0.33;
         Mat blur= new Mat();
-        //Imgproc.medianBlur(in, blur, 9); //TODO: I'm not sure which blur is faster
-        Imgproc.GaussianBlur(in, blur, new Size(5,5),0);
-        //blur = in; //debug
+        //Imgproc.medianBlur(in, blur, 15); //TODO: I'm not sure which blur is best
+        Imgproc.GaussianBlur(in, blur, new Size(11,11),0);
         Scalar mean = Core.mean(blur);
 
-/*        # apply automatic Canny edge detection using the computed median
+        /*
+        from: http://www.pyimagesearch.com/2015/04/06/zero-parameter-automatic-canny-edge-detection-with-python-and-opencv/
+        # apply automatic Canny edge detection using the computed median
         lower = int(max(0, (1.0 - sigma) * v))
-        upper = int(min(255, (1.0 + sigma) * v))*/
+        upper = int(min(255, (1.0 + sigma) * v))
+        */
 
         int lower = (int) Math.max(0, (1.0 - sigma) * mean.val[0]);
-        int upper = (int) Math.max(0, (1.0 + sigma) * mean.val[0]);
+        int upper = (int) Math.min(255, (1.0 + sigma) * mean.val[0]);
 
-        Imgproc.threshold(blur, out, lower, 255, Imgproc.THRESH_BINARY_INV); //debug
-        //Imgproc.Canny(blur, out, lower, upper, 3, false);
+        Imgproc.Canny(blur, out, lower, upper, 3, false);
     }
 
     /* Used for threading */
@@ -466,5 +435,18 @@ public class Card implements Runnable {
     public void run() {
         //processCardWarp(warpBox, parrentImage);
         processCard();
+    }
+
+
+    enum colorEnum {
+        RED, GREEN, PURPLE, INVALID
+    }
+
+    enum shapeEnum {
+        OVAL, SQUIGGLE, DIAMOND, INVALID
+    }
+
+    enum shadeEnum {
+        EMPTY, LINES, SOLID, INVALID
     }
 }

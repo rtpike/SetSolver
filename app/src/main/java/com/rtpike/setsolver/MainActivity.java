@@ -35,34 +35,44 @@ import java.util.List;
 public class MainActivity extends AppCompatActivity implements CvCameraViewListener, GestureDetector.OnGestureListener {
     //View.OnTouchListener,
     private static final String TAG = ":MainActivity";
-
-    private CameraBridgeViewBase mOpenCvCameraView;
-    private processImage mProcessImage;
-    private MenuItem mItemDebugCard;
-    private MenuItem mItemDebugMode;
-    private GestureDetectorCompat mDetector;
-
-    private boolean camRunning = true;
-    private int currentCard = 0;
-
     /**
      * Whether or not the system UI should be auto-hidden after
      * {@link #AUTO_HIDE_DELAY_MILLIS} milliseconds.
      */
     private static final boolean AUTO_HIDE = false;
-
     /**
      * If {@link #AUTO_HIDE} is set, the number of milliseconds to wait after
      * user interaction before hiding the system UI.
      */
     private static final int AUTO_HIDE_DELAY_MILLIS = 3000;
-
     /**
      * Some older devices needs a small delay between UI widget updates
      * and a change of the status and navigation bar.
      */
     private static final int UI_ANIMATION_DELAY = 300;
+    private static final int WHAT_PROCESS_IMAGE = 0;
     private final Handler mHideHandler = new Handler();
+    /**
+     * Touch listener to use for in-layout UI controls to delay hiding the
+     * system UI. This is to prevent the jarring behavior of controls going away
+     * while interacting with activity UI.
+     */
+    private final View.OnTouchListener mDelayHideTouchListener = new View.OnTouchListener() {
+        @Override
+        public boolean onTouch(View view, MotionEvent motionEvent) {
+            if (AUTO_HIDE) {
+                delayedHide(AUTO_HIDE_DELAY_MILLIS);
+            }
+            return false;
+        }
+    };
+    private CameraBridgeViewBase mOpenCvCameraView;
+    private processImage mProcessImage;
+    private MenuItem mItemDebugCard;
+    private MenuItem mItemDebugMode;
+    private GestureDetectorCompat mDetector;
+    private boolean camRunning = true;
+    private int currentCard = 0;
     private View mContentView;
     private final Runnable mHidePart2Runnable = new Runnable() {
         @SuppressLint("InlinedApi")
@@ -100,22 +110,6 @@ public class MainActivity extends AppCompatActivity implements CvCameraViewListe
             hide();
         }
     };
-    /**
-     * Touch listener to use for in-layout UI controls to delay hiding the
-     * system UI. This is to prevent the jarring behavior of controls going away
-     * while interacting with activity UI.
-     */
-    private final View.OnTouchListener mDelayHideTouchListener = new View.OnTouchListener() {
-        @Override
-        public boolean onTouch(View view, MotionEvent motionEvent) {
-            if (AUTO_HIDE) {
-                delayedHide(AUTO_HIDE_DELAY_MILLIS);
-            }
-            return false;
-        }
-    };
-
-
     private BaseLoaderCallback mLoaderCallback = new BaseLoaderCallback(this) {
 
         @Override
@@ -165,6 +159,7 @@ public class MainActivity extends AppCompatActivity implements CvCameraViewListe
 
         getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
 
+        OpenCVLoader.initAsync(OpenCVLoader.OPENCV_VERSION_3_2_0, this, mLoaderCallback);
         mOpenCvCameraView = new JavaCameraView(this, -1);
 
         setContentView(mOpenCvCameraView);
@@ -176,23 +171,23 @@ public class MainActivity extends AppCompatActivity implements CvCameraViewListe
 
     }
 
+/*    @Override
+    public void onResume() {
+        super.onResume();
+        if (!OpenCVLoader.initDebug()) {
+            Log.d(TAG, "Internal OpenCV library not found. Using OpenCV Manager for initialization");
+            OpenCVLoader.initAsync(OpenCVLoader.OPENCV_VERSION_3_2_0, this, mLoaderCallback);
+        } else {
+            Log.d(TAG, "OpenCV library found inside package. Using it!");
+            mLoaderCallback.onManagerConnected(LoaderCallbackInterface.SUCCESS);
+        }
+    }*/
+
     @Override
     public void onPause() {
         super.onPause();
         if (mOpenCvCameraView != null)
             mOpenCvCameraView.disableView();
-    }
-
-    @Override
-    public void onResume() {
-        super.onResume();
-        if (!OpenCVLoader.initDebug()) {
-            Log.d(TAG, "Internal OpenCV library not found. Using OpenCV Manager for initialization");
-            OpenCVLoader.initAsync(OpenCVLoader.OPENCV_VERSION_3_1_0, this, mLoaderCallback);
-        } else {
-            Log.d(TAG, "OpenCV library found inside package. Using it!");
-            mLoaderCallback.onManagerConnected(LoaderCallbackInterface.SUCCESS);
-        }
     }
 
     public void onDestroy() {
@@ -312,8 +307,6 @@ public class MainActivity extends AppCompatActivity implements CvCameraViewListe
         setContentView(R.layout.activity_fullscreen);
         setContentView(mOpenCvCameraView);
     }
-
-    private static final int WHAT_PROCESS_IMAGE = 0;
 
     public Mat onCameraFrame(Mat inputFrame) {
 

@@ -32,18 +32,16 @@ import java.lang.Math;
  */
 public class processImage { //} extends AsyncTask<Card, Void, Integer> {
 
-    public boolean debug=false;
     private static final String TAG = "processImage";
+    public boolean debug=false;
     /*
     Detects cards by finding contours
      */
-
+    public List<Card[]> mySets = new ArrayList<Card[]>();
     private List<Card> cards = null; //new ArrayList<Card>();
     private int numCards = 0;
     //private boolean setFound = false;
     private Mat inputImage = null;
-    public List<Card[]> mySets = new ArrayList<Card[]>();
-
 
     public int numCards() {
         /* Returns number of cards detected */
@@ -58,7 +56,7 @@ public class processImage { //} extends AsyncTask<Card, Void, Integer> {
 
         Mat outMat = in.clone();  //copy of input so we can draw on it without messing up card detection
         Mat gray = new Mat();
-        Mat blur = new Mat();
+        Mat blur = new Mat();  //debug
         Mat thresh = new Mat();
         Mat hierarchy = new Mat();
         this.cards = new ArrayList<>();
@@ -70,6 +68,7 @@ public class processImage { //} extends AsyncTask<Card, Void, Integer> {
 
         Imgproc.cvtColor(in, gray, Imgproc.COLOR_RGB2GRAY);
 
+        //INFO: extra function left commented for debug and test now filters
         //Imgproc.GaussianBlur(gray, blur, ksize, 500);
         //Imgproc.Canny(gray, thresh, 1500, 3000, 5, false);
         adaptiveCanny(gray, thresh);
@@ -92,14 +91,12 @@ public class processImage { //} extends AsyncTask<Card, Void, Integer> {
             MatOfPoint2f approxCurve = new MatOfPoint2f();
 
             peri = Imgproc.arcLength(card_2f, true);
-            //approx = rectify( );
             Imgproc.approxPolyDP(card_2f, approxCurve, 0.02 * peri, true);
 
             area = Imgproc.contourArea(approxCurve);
-            RotatedRect rect;
+
             if (area > 4000) {
-                //FIXME Rect rect = Imgproc.boundingRect(contours.get(i));
-                rect = null; //Imgproc.minAreaRect(approxCurve); //FIXME - remove
+
                 Point[] curve_vertices = approxCurve.toArray();
                 if (curve_vertices.length == 4) {
 
@@ -118,7 +115,7 @@ public class processImage { //} extends AsyncTask<Card, Void, Integer> {
                     //FIXME rotateSubImage(rect, in, ROI);
 
                     Mat ROI = new Mat();
-                    warpSubImage(rect, approxCurve, in, ROI);
+                    warpSubImage(approxCurve, in, ROI);
 
                     Card cardObj = new Card(ROI);
                     //Card cardObj = new Card();
@@ -162,7 +159,7 @@ public class processImage { //} extends AsyncTask<Card, Void, Integer> {
             }
 
             if (debug) {
-                //FIXME Imgproc.polylines(outMat,)
+
                 int p = 0;
                 for (p = 0; p < cardObj.corners.length; p++) {
                     Imgproc.line(outMat, cardObj.corners[p], cardObj.corners[(p + 1) % cardObj.corners.length], color, 3);
@@ -202,7 +199,7 @@ public class processImage { //} extends AsyncTask<Card, Void, Integer> {
         return outMat;
     }
 
-    public void rotateSubImage(RotatedRect rect, Mat in, Mat cropped) {
+    private void rotateSubImage(RotatedRect rect, Mat in, Mat cropped) {
         /* Rotate and crop the given image */
 
         // matrices we'll use
@@ -233,7 +230,13 @@ public class processImage { //} extends AsyncTask<Card, Void, Integer> {
 
     }
 
-    double pointNorm(Point pts0, Point pts1) {
+    /**
+     * Return the distance between the two points
+     * @param pts0
+     * @param pts1
+     * @return
+     */
+    private double pointNorm(Point pts0, Point pts1) {
         double x = pts0.x - pts1.x;
         double y = pts0.y - pts1.y;
 
@@ -241,15 +244,10 @@ public class processImage { //} extends AsyncTask<Card, Void, Integer> {
     }
 
 
-    public void warpSubImage(RotatedRect rect,MatOfPoint2f warpBox, Mat in, Mat cropped) {
+    private void warpSubImage(MatOfPoint2f warpBox, Mat in, Mat cropped) {
         /* Rotate and crop the given image */
 
-        // get the rotation matrix
-        //rotMat = Imgproc.getRotationMatrix2D(rect.center, angle, 1.0);  // <<<<<<<<<<<<
-        // perform the affine transformation
-        //Imgproc.warpAffine(in, out, rotMat, in.size(), Imgproc.INTER_CUBIC); //<<<<<<<<<<<<
-        // crop the resulting image
-        //Imgproc.getRectSubPix(out, rect_size, rect.center, cropped);
+
 
         Point points[] = new Point[4];
 
@@ -289,16 +287,19 @@ public class processImage { //} extends AsyncTask<Card, Void, Integer> {
     private void adaptiveCanny(Mat in,Mat out) {
         double sigma = 0.33;
         Mat blur= new Mat();
-        //Imgproc.medianBlur(in, blur, 15); //TODO: I'm not sure which blur is faster
+        //Imgproc.medianBlur(in, blur, 15); //TODO: I'm not sure which blur is best
         Imgproc.GaussianBlur(in, blur, new Size(11,11),0);
         Scalar mean = Core.mean(blur);
 
-/*        # apply automatic Canny edge detection using the computed median
+        /*
+        from: http://www.pyimagesearch.com/2015/04/06/zero-parameter-automatic-canny-edge-detection-with-python-and-opencv/
+        # apply automatic Canny edge detection using the computed median
         lower = int(max(0, (1.0 - sigma) * v))
-        upper = int(min(255, (1.0 + sigma) * v))*/
+        upper = int(min(255, (1.0 + sigma) * v))
+        */
 
         int lower = (int) Math.max(0, (1.0 - sigma) * mean.val[0]);
-        int upper = (int) Math.max(0, (1.0 + sigma) * mean.val[0]);
+        int upper = (int) Math.min(255, (1.0 + sigma) * mean.val[0]);
 
         Imgproc.Canny(blur, out, lower, upper, 3, false);
     }
@@ -327,22 +328,19 @@ public class processImage { //} extends AsyncTask<Card, Void, Integer> {
 
     /* brute force method to find a set
     */
-    public boolean findSet(List<Card[]> setCards) {
+    private boolean findSet(List<Card[]> setCards) {
 
         //setCards = new Card[3];
         //At least three cards are needed to find a set
         int card_size = cards.size();
         if (card_size < 3 ) { return false; }
 
-        for (int i=0;i < card_size; i++ ){
+        for (int i=0;i < card_size; i++ ){ //find all sets
             for (int j=i+1;j < card_size;j++){
                 for (int k=j+1;k < card_size;k++){
-                    if (isSet(cards.get(i),cards.get(j),cards.get(k))) { //FIXME: find all sets
-                        setCards.add(new Card[] {cards.get(i),cards.get(j),cards.get(k)});
-/*                        setCards[0] = cards.get(i);
-                        setCards[1] = cards.get(j);
-                        setCards[2] = cards.get(k);
-                        return true; //set found*/
+                    if (isSet(cards.get(i),cards.get(j),cards.get(k))) {
+                        setCards.add(new Card[] {cards.get(i),cards.get(j),cards.get(k)}); //set found
+
                     }
                 }
             }
@@ -386,102 +384,6 @@ public class processImage { //} extends AsyncTask<Card, Void, Integer> {
         return numberSet && colorSet && shadeSet && shapeSet;
     }
 
-    public Mat findLargestRectangle(Mat original_image) {
-        Mat imgSource = original_image.clone();
-        //Mat untouched = original_image.clone();
-
-        //convert the image to black and white
-        Imgproc.cvtColor(imgSource, imgSource, Imgproc.COLOR_BGR2GRAY);
-
-        //convert the image to black and white does (8 bit)
-        Imgproc.Canny(imgSource, imgSource, 50, 50);
-
-        //apply gaussian blur to smoothen lines of dots
-        Imgproc.GaussianBlur(imgSource, imgSource, new Size(5, 5), 5);
-
-        //find the contours
-        List<MatOfPoint> contours = new ArrayList<MatOfPoint>();
-        Imgproc.findContours(imgSource, contours, new Mat(), Imgproc.RETR_LIST, Imgproc.CHAIN_APPROX_SIMPLE);
-
-        double maxArea = -1;
-        int maxAreaIdx = -1;
-
-        if (contours.size() <= 0) {
-            return original_image;
-        }
-        MatOfPoint temp_contour;// = contours.get(0); //the largest is at the index 0 for starting point
-        MatOfPoint2f approxCurve = new MatOfPoint2f();
-        MatOfPoint2f maxCurve = new MatOfPoint2f();
-        List<MatOfPoint> largest_contours = new ArrayList<>();
-        //create the new image here using the largest detected square
-        //FIXME vvv
-        Mat new_image = new Mat(imgSource.size(), CvType.CV_8U); //we will create a new black blank image with the largest contour
-        Imgproc.cvtColor(new_image, new_image, Imgproc.COLOR_BayerBG2RGB);
-        //FIXME ^^^
-        int contours_size = contours.size();
-        for (int idx = 0; idx < contours_size; idx++) {
-            temp_contour = contours.get(idx);
-            double contourarea = Imgproc.contourArea(temp_contour);
-            //compare this contour to the previous largest contour found
-            if (contourarea > maxArea) {
-                //check if this contour is a square
-                MatOfPoint2f new_mat = new MatOfPoint2f(temp_contour.toArray());
-                int contourSize = (int) temp_contour.total();
-                Imgproc.approxPolyDP(new_mat, approxCurve, contourSize * 0.05, true);
-                if (approxCurve.total() == 4) {
-                    maxCurve = approxCurve;
-                    maxArea = contourarea;
-                    maxAreaIdx = idx;
-                    largest_contours.add(temp_contour);
-                }
-            }
-        }
-
-        //maxAreaIdx = idx;
-        //create the new image here using the largest detected square
-        //FIXME Mat new_image = new Mat(imgSource.size(), CvType.CV_8U); //we will create a new black blank image with the largest contour
-        //Imgproc.cvtColor(new_image, new_image, Imgproc.COLOR_BayerBG2RGB);
-        Imgproc.drawContours(new_image, contours, maxAreaIdx, new Scalar(255, 255, 255), 1); //will draw the largest square/rectangle
-
-        double temp_double[] = maxCurve.get(0, 0);
-        if (temp_double == null) {
-            return new_image;
-        }
-        Point p1 = new Point(temp_double[0], temp_double[1]);
-        Imgproc.circle(new_image, new Point(p1.x, p1.y), 20, new Scalar(255, 0, 0), 5); //p1 is colored red
-        String temp_string = "Point 1: (" + p1.x + ", " + p1.y + ")";
-
-        temp_double = maxCurve.get(1, 0);
-        if (temp_double == null) {
-            return new_image;
-        }
-        Point p2 = new Point(temp_double[0], temp_double[1]);
-        Imgproc.circle(new_image, new Point(p2.x, p2.y), 20, new Scalar(0, 255, 0), 5); //p2 is colored green
-        temp_string += "\nPoint 2: (" + p2.x + ", " + p2.y + ")";
-
-        temp_double = maxCurve.get(2, 0);
-        if (temp_double == null) {
-            return new_image;
-        }
-        Point p3 = new Point(temp_double[0], temp_double[1]);
-        Imgproc.circle(new_image, new Point(p3.x, p3.y), 20, new Scalar(0, 0, 255), 5); //p3 is colored blue
-        temp_string += "\nPoint 3: (" + p3.x + ", " + p3.y + ")";
-
-        temp_double = maxCurve.get(3, 0);
-        if (temp_double == null) {
-            return new_image;
-        }
-        Point p4 = new Point(temp_double[0], temp_double[1]);
-        Imgproc.circle(new_image, new Point(p4.x, p4.y), 20, new Scalar(0, 255, 255), 5); //p1 is colored violet
-        temp_string += "\nPoint 4: (" + p4.x + ", " + p4.y + ")";
-
-        //TextView temp_text = (TextView)MainActivity.findViewById(R.id.TextView);
-        //temp_text.setText(temp_string);
- /*           }
-        }}
- */
-        return new_image;
-    }
 
     private Mat testImage() {
 
@@ -514,37 +416,4 @@ public class processImage { //} extends AsyncTask<Card, Void, Integer> {
         return rgbLoadedImage;
     }
 
-
-
-/*
-    // run detection method in background thread
-    // takes in parameter in the .execute(Mat mGray) call on the class that is created
-    @Override
-    protected Integer doInBackground(Card... params ) { //Mat... params) {
-        Log.d(TAG, "background task started: ");
-
-        Card cardObj = params[0];
-
-*//*        Card cardObj = new Card(ROI);
-        cardObj.cardName = String.format("%d",numCards); //used for debugging
-        cardObj.corners = curve_vertices.clone();  //corners of card
-        cards.add(cardObj);  // add to list*//*
-        cardObj.processCard();
-
-        return 1;
-    }*/
-
-/*    // result Integer is passed here after
-    // this method is run on maing UI thread
-    @Override
-    protected void onPostExecute(Integer result) {
-
-        Log.i(TAG,"Card DETECTION Done");
-
-        // add methods here to be executed after circle is detected
-
-        // stop blocking and allow the next frame to be started
-        //detectionRunning = false;
-
-    }*/
 }
