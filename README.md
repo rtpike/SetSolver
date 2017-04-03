@@ -1,8 +1,8 @@
 
 
-**SetSolver** is a simple Android app uses OpenCV to find "sets" in the card game [Set] (http://www.setgame.com/set).
+**SetSolver** is a simple Android app uses OpenCV to find "sets" in the card game [Set](http://www.setgame.com/set).
 
-[Set Wikipedia page] (https://en.wikipedia.org/wiki/Set_(game))
+[Set Wikipedia page](https://en.wikipedia.org/wiki/Set_(game))
 
 ## Details
 
