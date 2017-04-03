@@ -13,7 +13,7 @@ Tap on the screen to freeze the image.  Tap again to resume real-time camera cap
 
 - **Inspect Cards**: Inspect detected cards individually.  Swipe right or left to see next card. 
 - **Show Debug info**: overlay debug info over the image
-  - Cards outlined **red** can not be identified
+  - Cards outlined in **red** can't be identified
   - Cards outlined in **blue** are identified
   - Debug text: (card #), # of shapes, color, fill, shape type.  
     - Example: "(0)1:P:S:O" - Card contains One Purple Solid Oval
