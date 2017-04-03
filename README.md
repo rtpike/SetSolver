@@ -7,7 +7,7 @@
 ## Details
 
 SetSolver uses OpenCV and the phones camera to to identify sets and outlines the cards cards green. 
-Tap on the screen to freze the image.  Tap again to resume real-time camera capture.
+Tap on the screen to freeze the image.  Tap again to resume real-time camera capture.
 
 ### Debug features ###
 
