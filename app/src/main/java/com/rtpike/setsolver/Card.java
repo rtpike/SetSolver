@@ -143,7 +143,8 @@ public class Card implements Runnable {
 
 
 
-        cardImg_markup = thresh; //Debug
+        //cardImg_markup = thresh; //Debug
+        //cardImg_markup = cardThreshold; //Debug
         double area = 0, validConArea = 0;
         MatOfPoint contours_0 = null;
 
@@ -190,7 +191,7 @@ public class Card implements Runnable {
         MatOfPoint2f approxCurve = new MatOfPoint2f();
 
         //-------------------------------
-        Imgproc.approxPolyDP(card_2f, approxCurve, 0.016 * perimeter, true);
+        Imgproc.approxPolyDP(card_2f, approxCurve, 0.014 * perimeter, true);
 
         if (debug) {
             Imgproc.putText(cardImg_markup, "" + approxCurve.height() + ", " + String.format("%.2f", areaVsPer), center, Core.FONT_HERSHEY_PLAIN, 1, new Scalar(0, 0, 0));
@@ -231,7 +232,7 @@ public class Card implements Runnable {
             Log.d(TAG, "    isConvex: " + isConvex);
         }
 
-        if (isConvex && (areaVsPer > 24 && areaVsPer < 32)) {
+        if (isConvex && (areaVsPer > 22 && areaVsPer < 32)) {
             shape = shapeEnum.OVAL;
         } else if (!isConvex && (areaVsPer > 16 && areaVsPer < 26) && (approxCurve.height() >= 7)) {
             shape = shapeEnum.SQUIGGLE;
@@ -277,21 +278,24 @@ public class Card implements Runnable {
         Imgproc.cvtColor(cardImg_markup, cardHSV, Imgproc.COLOR_RGB2HSV);
 
         int rCnt, gCnt, pCnt;
-        Mat redThresh, greenThresh;// = null; //,purpleThresh ;
+        Mat redThresh0 = new Mat();
+        Mat redThresh1 = new Mat();
+        Mat greenThresh = null;
         //Red
-        inRange(cardHSV, new Scalar(0, 15, 100), new Scalar(15, 255, 245), cardThreshold);
-        //inRange(cardHSV, new Scalar(0, 60, 100), new Scalar(15, 255, 255), cardThreshold);
+        inRange(cardHSV, new Scalar(0, 15, 100), new Scalar(15, 255, 245), redThresh0); //red
+        inRange(cardHSV, new Scalar(165, 50, 100), new Scalar(180, 255, 245), redThresh1); //pinkish
+        bitwise_or(redThresh0,redThresh1,cardThreshold);
         rCnt = countNonZero(cardThreshold);
-        redThresh =cardThreshold.clone();
+        //redThresh0 =cardThreshold.clone();
 
         //Green
-        inRange(cardHSV, new Scalar(50, 30, 100), new Scalar(80, 255, 245), cardThreshold);
+        inRange(cardHSV, new Scalar(50, 50, 100), new Scalar(80, 255, 245), cardThreshold);
         //inRange(cardHSV, new Scalar(45, 40, 100), new Scalar(80, 255, 255), cardThreshold);
         gCnt = countNonZero(cardThreshold);
-        greenThresh = cardThreshold.clone();
+        //greenThresh = cardThreshold.clone();
 
         //Purple
-        inRange(cardHSV, new Scalar(115, 30, 100), new Scalar(165, 255, 245), cardThreshold);
+        inRange(cardHSV, new Scalar(115, 50, 100), new Scalar(150, 255, 245), cardThreshold);
         //inRange(cardHSV, new Scalar(120, 40, 100), new Scalar(165, 255, 255), cardThreshold);
         pCnt = countNonZero(cardThreshold);
         //purpleThresh.clone();
@@ -299,10 +303,10 @@ public class Card implements Runnable {
         //cardThreshold = cardHSV; //TODO
         if (rCnt > gCnt && rCnt > pCnt) {
             color = colorEnum.RED;
-            cardThreshold = redThresh;
+            //cardThreshold = redThresh0;
         } else if (gCnt > rCnt && gCnt > pCnt) {
             color = colorEnum.GREEN;
-            cardThreshold = greenThresh;
+            //cardThreshold = greenThresh;
         } else if (pCnt > rCnt && pCnt > gCnt) {
             color = colorEnum.PURPLE;
         }
