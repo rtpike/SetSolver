@@ -15,6 +15,10 @@ import org.opencv.utils.Converters;
 //javadoc: javaFeatureDetector
 public class FeatureDetector {
 
+    private static final int
+            GRIDDETECTOR = 1000,
+            PYRAMIDDETECTOR = 2000,
+            DYNAMICDETECTOR = 3000;
     public static final int
             FAST = 1,
             STAR = 2,
@@ -64,10 +68,7 @@ public class FeatureDetector {
             DYNAMIC_DENSE = DYNAMICDETECTOR + DENSE,
             DYNAMIC_BRISK = DYNAMICDETECTOR + BRISK,
             DYNAMIC_AKAZE = DYNAMICDETECTOR + AKAZE;
-    private static final int
-            GRIDDETECTOR = 1000,
-            PYRAMIDDETECTOR = 2000,
-            DYNAMICDETECTOR = 3000;
+
     protected final long nativeObj;
 
 
