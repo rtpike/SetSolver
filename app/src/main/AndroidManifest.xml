@@ -12,7 +12,7 @@
             android:name="com.rtpike.setsolver.MainActivity"
             android:configChanges="keyboardHidden|orientation"
             android:label="@string/app_name"
-            android:screenOrientation="sensorLandscape"
+            android:screenOrientation="landscape"
             android:theme="@style/FullscreenTheme">
 
             <intent-filter>
