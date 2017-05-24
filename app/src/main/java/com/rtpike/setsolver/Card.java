@@ -59,7 +59,7 @@ public class Card implements Runnable {
 
 
     Card(Mat cardImg) {
-        int cropSize = 15;  //crop of 15 pixels per side
+        int cropSize = 15;  //crop off 15 pixels per side
         this.cardImg = cardImg.submat(cropSize, cardImg.rows() - cropSize, cropSize, cardImg.cols() - cropSize); //crop off the edges
     }
     /* preload warpBox and input image. Use with the runnable */
@@ -129,8 +129,8 @@ public class Card implements Runnable {
         Imgproc.cvtColor(cardImg_markup, gray, Imgproc.COLOR_RGB2GRAY);
 
         //Imgproc.Canny(gray, thresh, 15, 60, 3, false); //debug
-        Imgproc.adaptiveThreshold(gray, thresh, 255, Imgproc.ADAPTIVE_THRESH_MEAN_C , Imgproc.THRESH_BINARY_INV, 15, 9); //debug
-        ///Imgproc.threshold(gray, thresh, 220, 255, Imgproc.THRESH_BINARY_INV);
+        //Default Imgproc.adaptiveThreshold(gray, thresh, 255, Imgproc.ADAPTIVE_THRESH_MEAN_C , Imgproc.THRESH_BINARY_INV, 15, 9); //debug
+        Imgproc.threshold(gray, thresh, 0, 255, Imgproc.THRESH_BINARY_INV+Imgproc.THRESH_OTSU);
         //adaptiveCanny(gray,thresh);
 
         //inRange(cardHSV, new Scalar(0, 25, 200), new Scalar(255, 255, 255), cardThreshold); //debug
@@ -190,6 +190,8 @@ public class Card implements Runnable {
         MatOfPoint2f card_2f = new MatOfPoint2f(contours_0.toArray());
         MatOfPoint2f approxCurve = new MatOfPoint2f();
 
+        // TODO:   Imgproc.HuMoments(contours_0);
+
         //-------------------------------
         Imgproc.approxPolyDP(card_2f, approxCurve, 0.014 * perimeter, true);
 
@@ -232,7 +234,7 @@ public class Card implements Runnable {
             Log.d(TAG, "    isConvex: " + isConvex);
         }
 
-        if (isConvex && (areaVsPer > 22 && areaVsPer < 32)) {
+        if (isConvex && (areaVsPer > 18 && areaVsPer < 32)) {
             shape = shapeEnum.OVAL;
         } else if (!isConvex && (areaVsPer > 16 && areaVsPer < 26) && (approxCurve.height() >= 7)) {
             shape = shapeEnum.SQUIGGLE;
@@ -253,21 +255,21 @@ public class Card implements Runnable {
         double[] whitePixel = new double[3];
         //whitePixel = cardImg.get(15, 15);
         sampleMat = cardImg.submat(0, 5, 0, 5);
-        //Imgproc.medianBlur(sampleMat, blur, 9);
-        //Imgproc.GaussianBlur(sampleMat, blur, new Size(9,9),0);
         whitePixel = mean(sampleMat).val;
 
         if (debug) {
             Log.d(TAG, "    White sample: " + String.format("[%.0f, %.0f, %.0f]", whitePixel[0], whitePixel[1], whitePixel[2]));
         }
 
-         double[] transMatrix = {256 / whitePixel[0], 0, 0, //Red
-                0, 256 / whitePixel[1], 0, //Green
-                0, 0, 256 / whitePixel[2]}; //Blue
+         double[] transMatrix = {255 / whitePixel[0], 0, 0, //Red
+                                0, 255 / whitePixel[1], 0,  //Green
+                                0, 0, 255 / whitePixel[2]}; //Blue
 
         Mat whiteCorrect = new Mat(3, 3, CvType.CV_64FC1);
         whiteCorrect.put(0, 0, transMatrix); //FIXME: change to setTo for speed
         transform(cardImg, cardImg_markup, whiteCorrect); //FIXME: try split/merge instead
+
+        //TODO: try using cv::xphoto::SimpleWB Class Reference
 
 /*        double[] transMatrix = {256 / whitePixel[0], //Red
                  256 / whitePixel[1],  //Green

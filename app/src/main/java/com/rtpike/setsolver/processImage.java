@@ -259,7 +259,7 @@ public class processImage { //} extends AsyncTask<Card, Void, Integer> {
         points[3] =  new Point(0,350);
         MatOfPoint2f destWarp = new MatOfPoint2f(points);*/
 
-        //TODO: rotate warpBox so longest side is horizontal
+        //rotate warpBox so longest side is horizontal
         Point[] curve_vertices = warpBox.toArray();
         //if (curve_vertices.length == 4) {  //TODO: check length
         double height_dist = pointNorm(curve_vertices[0], curve_vertices[1]);
