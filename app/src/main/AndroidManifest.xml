@@ -3,6 +3,7 @@
     package="com.rtpike.setsolver">
 
     <application
+        android:debuggable="true"
         android:name="com.rtpike.setsolver.MyApplication"
         android:icon="@mipmap/ic_launcher"
         android:label="@string/app_name"
